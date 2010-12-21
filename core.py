@@ -91,5 +91,6 @@ try:
         eventlet.sleep(1)
         
 except (KeyboardInterrupt, SystemExit):
+    print "Exiting..."
     cluster.leave()
-    print "Exiting."
+    ctx.term()
