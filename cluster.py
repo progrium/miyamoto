@@ -34,8 +34,11 @@ class ClusterNode(object):
     
     def join(self):
         for retry in range(self.retries):
-            cluster = set((self.client.gets(self.index) or '').split(','))
-            cluster = self._cleanup_index(cluster)
+            cluster = self.client.gets(self.index) or ''
+            if cluster:
+                cluster = self._cleanup_index(set(cluster.split(',')))
+            else:
+                cluster = set()
             self.client.set('%s.%s' % (self.index, self.id), self.id, time=self.ttl)
             cluster.add(self.id)
             if self.client.cas(self.index, ','.join(cluster)):
@@ -48,9 +51,12 @@ class ClusterNode(object):
     def leave(self):
         for retry in range(self.retries):
             self.client.delete('%s.%s' % (self.index, self.id))
-            cluster = set(self.client.gets(self.index).split(','))
-            cluster = self._cleanup_index(cluster)
-            if self.clients.cas(self.index, ','.join(cluster)):
+            cluster = self.client.gets(self.index) or ''
+            if cluster:
+                cluster = self._cleanup_index(set(cluster.split(',')))
+            else:
+                cluster = set()
+            if self.client.cas(self.index, ','.join(cluster)):
                 self.cluster = set()
                 return True
         raise CoordinationError()
@@ -67,7 +73,7 @@ class ClusterNode(object):
     
     def _schedule_heartbeat(self):
         if len(self.cluster):
-            random_interval = random.randint(self.ttl/2, self.ttl)
+            random_interval = random.randint(self.ttl/2, self.ttl-(self.ttl/5))
             def update():
                 self.client.set('%s.%s' % (self.index, self.id), self.id, time=self.ttl)
                 old_cluster = self.cluster
