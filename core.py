@@ -83,7 +83,7 @@ def finisher():
 
 try:
     for n in range(2):
-        eventlet.spawn_n(enqueuer)
+        eventlet.spawn_after(1, enqueuer)
     eventlet.spawn_n(dispatcher)
     eventlet.spawn_n(finisher)
     
