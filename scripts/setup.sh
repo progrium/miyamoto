@@ -5,5 +5,6 @@ cd zeromq-2.0.10
 ./configure
 sudo make install
 sudo /usr/local/python/bin/easy_install-2.5 pyzmq
+sudo /usr/local/python/bin/easy_install-2.5 python-memcached
 
 LD_LIBRARY_PATH=/usr/local/lib

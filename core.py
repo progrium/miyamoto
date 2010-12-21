@@ -17,13 +17,15 @@ from agenda import Agenda
 
 use_hub('zeromq')
 
-datastore = memcache.Client(['127.0.0.1:11211'], debug=0)
+interface = sys.argv[1]
+
+cluster_address, cluster_key = sys.argv[2].split('/')
+
+datastore = memcache.Client([cluster_address], debug=0)
 
 ctx = zmq.Context()
 
-interface = sys.argv[1]
-
-cluster = ClusterNode(datastore, 'miyamoto-cluster', interface, ttl=10)
+cluster = ClusterNode(datastore, cluster_key, interface, ttl=10)
 cluster.join()
 
 agenda = Agenda(datastore, 'miyamoto-data')
