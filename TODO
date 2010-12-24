@@ -1,0 +1,37 @@
+-cluster playground
+-functional testing
+ -lose node
+ -lose all nodes
+ 
+ 
+-expire tokens in enqueued
+-finisher commands:
+ -done/ack
+ -wait/keepalive
+ -error/nack
+-
+ 
+control:
+ -node join
+ -node leave
+ -new enqueue token
+ -
+ 
+
+enqueuer node
+memcache node
+miyamoto node
+worker node
+control node
+
+launch nodes
+run roles
+
+
+each enqueuer:
+ -run test with x/n messages
+ -receive finish time, msg/sec
+
+messages
+runtime
+msg/sec

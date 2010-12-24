@@ -3,6 +3,7 @@ import os
 import eventlet
 import uuid
 import time
+import random
 
 from eventlet.green import socket
 from eventlet.green import zmq
@@ -26,7 +27,7 @@ def enqueuer(n):
     for node in nodes:
         frontend.connect('tcp://%s:7000' % node)
     for m in range(n):
-        job = '{"job":%s}' % time.time()
+        job = '%s::{"job":%s}' % (random.random(), time.time())
         frontend.send(job)
         resp = frontend.recv()
         messages.append(job)
@@ -47,7 +48,7 @@ def worker():
 
 try:
     size = 10000
-    #eventlet.spawn_n(worker)
+    eventlet.spawn_n(worker)
     t1 = time.time()
     eventlet.spawn_n(enqueuer, size)
     while len(messages) < size:

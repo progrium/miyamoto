@@ -24,12 +24,15 @@ class ClusterNode(object):
     
     retries = 3
     
-    def __init__(self, client, prefix, id, ttl=30):
+    def __init__(self, context, client, prefix, id, ttl=30, port=7777):
+        self.context = context
         self.client = client
         self.index = prefix
         self.id = id
         self.ttl = ttl
+        self.port = port
         self.cluster = set()
+        self.control = None
         self.callbacks = collections.defaultdict(list)
     
     def join(self):
@@ -45,6 +48,7 @@ class ClusterNode(object):
                 print "[Cluster] Joined as %s" % self.id
                 self.cluster = cluster
                 self._schedule_heartbeat()
+                self._create_sockets(self.cluster)
                 return True
         raise CoordinationError()
     
@@ -71,6 +75,20 @@ class ClusterNode(object):
         index = self.client.get_multi(cluster, '%s.' % self.index) 
         return set([n for n in index if n])
     
+    def _create_sockets(self, addresses=None):
+        self.control = self.context.socket(zmq.SUB)
+        self.control.setsockopt(zmq.SUBSCRIBE, '')
+        self._control_out = self.context.socket(zmq.PUB)
+        if addresses:
+            self._connect_sockets(addresses)
+    
+    def _connect_sockets(self, addresses):
+        for address in addresses:
+            self.control.connect('tcp://%s:%s' % (address, self.port))
+        
+    def send(self, message):
+        self._control_out.send(message)
+    
     def _schedule_heartbeat(self):
         if len(self.cluster):
             random_interval = random.randint(self.ttl/2, self.ttl-(self.ttl/5))
@@ -82,6 +100,7 @@ class ClusterNode(object):
                 added = self.cluster - old_cluster
                 if added:
                     print "[Cluster] Added %s" % ', '.join(added)
+                    self._connect_sockets(added)
                     for cb in self.callbacks['add']:
                         cb(added)
                 self._schedule_heartbeat()
