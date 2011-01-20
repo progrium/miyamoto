@@ -1,3 +1,11 @@
+-web frontend
+-web dispatcher
+-membase
+
+no enqueue/dequeue control messages
+
+
+
 -cluster playground
 -functional testing
  -lose node

@@ -3,13 +3,16 @@ import os
 import eventlet
 import uuid
 import time
+import json
 
 from eventlet.green import socket
 from eventlet.green import zmq
 from eventlet.hubs import use_hub
+from eventlet import wsgi
 from zmq import devices
 
 import memcache
+import webob
 
 from utils import Device
 from cluster import ClusterNode
@@ -32,6 +35,7 @@ agenda = Agenda(datastore, 'miyamoto-data')
 
 dispatch_timeout = 60
 
+# These need to have a max size
 enqueued = set()
 
 frontend = Device(zmq.QUEUE, zmq.XREP, zmq.XREQ, ctx)
@@ -39,6 +43,8 @@ frontend.bind_in('tcp://%s:7000' % interface)
 frontend.bind_out('inproc://frontend-out')
 print "Starting frontend on 7000..."
 frontend.start()
+
+enqueue_out = ctx.socket(zmq.PUSH)
 
 # token::{task}
 # :time:{task}
@@ -48,16 +54,7 @@ frontend.start()
 def enqueuer():
     incoming = ctx.socket(zmq.REP)
     incoming.connect('inproc://frontend-out')
-    outgoing = ctx.socket(zmq.PUSH)
-    def connect(node):
-        print "Enqueuer connecting to %s..." % node
-        if node == interface:
-            outgoing.connect('inproc://dispatcher-in')
-        else:
-            outgoing.connect('tcp://%s:7050' % node)
-    for node in cluster.all():
-        connect(node)
-    cluster.callbacks['add'].append(lambda x: map(connect,x))
+    
     while True:
         msg = incoming.recv()
         params, task = msg.split('{', 1)
@@ -67,18 +64,26 @@ def enqueuer():
         else:
             token = None
             time = None
-        if token and token in enqueued:
-            incoming.send('{"status":"duplicate"}')
-            continue
-        id = uuid.uuid4().hex
-        if agenda.add(id, at=time or None) and datastore.set(id, task):
+
+        id = enqueue(task, time, token)
+        if id:
             incoming.send('{"status":"stored", "id": "%s"}' % id)
-            if token:
-                enqueued.add(token)
-                cluster.send('enqueue:%s' % token)
-            outgoing.send_pyobj((id, task))
+        elif id == False:
+            incoming.send('{"status":"duplicate"}')
         else:
             incoming.send('{"status":"failure"}')
+
+def enqueue(task, time=None, token=None):
+    if token and token in enqueued:
+        return False
+    id = uuid.uuid4().hex
+    if agenda.add(id, at=time or None) and datastore.set(id, task):
+        if token:
+            enqueued.add(token)
+        enqueue_out.send_pyobj((id, task))
+        return id
+    else:
+        return None
         
 def dispatcher():
     incoming = ctx.socket(zmq.PULL)
@@ -106,17 +111,53 @@ def finisher():
 def control():
     while True:
         cmd, payload = cluster.control.recv().split(',')
-        if cmd == 'enqueue':
-            enqueued.add(payload)
+        # ...
+
+def web_enqueuer(env, start_response):
+    req = webob.Request(env)
+    task = dict(req.POST)
+    if '_time' in task:
+        del task['_time']
+    if '_token' in task:
+        del task['_token']
+    task = json.dumps(task)
+    id = enqueue(task, req.POST.get('_time'), req.POST.get('_token'))
+    if id:
+        start_response('200 OK', [('Content-Type', 'application/json')])
+        return ['{"status":"stored", "id": "%s"}\n' % id]
+        outgoing.send_pyobj((id, task))
+    elif id == False:
+        start_response('400 Bad request', [('Content-Type', 'application/json')])
+        return ['{"status":"duplicate"}\n']
+    else:
+        start_response('500 Server error', [('Content-Type', 'application/json')])
+        return ['{"status":"failure"}\n']
+    
+
+def setup_enqueue():
+    def connect(node):
+        print "Enqueuer connecting to %s..." % node
+        if node == interface:
+            enqueue_out.connect('inproc://dispatcher-in')
+        else:
+            enqueue_out.connect('tcp://%s:7050' % node)
+    for node in cluster.all():
+        connect(node)
+    cluster.callbacks['add'].append(lambda x: map(connect,x))
 
 try:
+    
     for n in range(2):
         eventlet.spawn_after(1, enqueuer)
     eventlet.spawn_n(dispatcher)
     eventlet.spawn_n(finisher)
     
-    while True:
-        eventlet.sleep(1)
+    eventlet.spawn_after(1, setup_enqueue)
+    
+    
+    wsgi.server(eventlet.listen((interface, 8080)), web_enqueuer)
+    #while True:
+    #    eventlet.sleep(1)
         
 except (KeyboardInterrupt, SystemExit):
     print "Exiting..."

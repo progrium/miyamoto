@@ -79,6 +79,7 @@ class ClusterNode(object):
         self.control = self.context.socket(zmq.SUB)
         self.control.setsockopt(zmq.SUBSCRIBE, '')
         self._control_out = self.context.socket(zmq.PUB)
+        self._control_out.bind('tcp://%s:%s' % (self.id, self.port))
         if addresses:
             self._connect_sockets(addresses)
     

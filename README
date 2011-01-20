@@ -4,3 +4,7 @@
 -optional rate limiting
 -scheduling
 -inspection
+
+
+throughput defined by enqueue/dispatch rate ratio
+
