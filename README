@@ -76,6 +76,12 @@ balancing. But it will do this R times where R is a replication factor. Each rep
 has an added delay to execution. If any of them run, the others are canceled.
 In this way you can schedule tasks and not worry that hosts might go down, achieving
 HA of service and data. 
+
+ADVERTISED FEATURES NOT YET DONE
+
+- rate limiting
+- idempotency
+- error handling
  
 LICENSE
 
