@@ -1,0 +1,66 @@
+Miyamoto Task Queue
+
+Miyamoto is a fast, clusterable task queue inspired by Google App Engine's task 
+queue. This means it speaks HTTP with a RESTful API for enqueuing tasks and uses
+webhooks for processing tasks. Worker daemons are simply your web daemons.
+
+Like the App Engine task queue, Miyamoto features task scheduling and rate 
+limiting. Unlike the App Engine task queue, it provides idempotency semantics
+and helps you avoid duplicate execution of tasks.
+
+Miyamoto is designed for:
+ - High throughput (fast)
+ - Fault tolerance (highly available)
+ - Data replication (minimal lost messages)
+ - No major dependencies or client libs (easy to set up and use)
+ - Simple design/implementation (easy to hack!)
+
+Miyamoto is bad if you want:
+ - Slow disk persistence (but we may add it)
+ - Traditional task polling
+ - AMQP, JMS, or other interfaces
+
+Not out of the box, but you can still achieve:
+ - Synchronous tasks
+ - Return values / result storage
+ - Workers behind firewall/NAT
+ 
+GETTING STARTED
+
+Make sure you have Python 2.6+ installed with gevent.
+
+    python miyamoto/queue.py 127.0.0.1 127.0.0.1
+
+For now, read the code to see what that means. Some better hints in miyamoto/cluster.py
+
+USAGE
+
+Once it's running (currently hardcoded to 8088), set up a pretend web server with netcat:
+
+    nc -l 9099
+
+Now let's post a task to it: 
+
+    curl -d "task.url=http://localhost:9099/worker&task.countdown=5&foo=bar" http://localhost:8088/queue
+
+You should get back some JSON:
+
+    {"status": "scheduled", "id": "7e998f34-bed7-44f4-80cd-49620b0ab562"}
+
+And in 5 seconds, you should see on your listening netcat:
+
+    POST /worker HTTP/1.1
+    Accept-Encoding: identity
+    Content-Length: 7
+    Host: localhost:9099
+    Content-Type: application/x-www-form-urlencoded
+    X-Task-Id: 7e998f34-bed7-44f4-80cd-49620b0ab562
+    Connection: close
+    User-Agent: miyamoto/0.1
+    
+    foo=bar
+
+You can also add tasks as JSON objects. Here's one without a delay:
+
+    curl -H "Content-Type: applicatoin/json" -d "{\"url\": \"http://localhost:9099/worker\", \"params\": {\"foo\": \"bar\"}}" http://localhost:8088/queue
+    

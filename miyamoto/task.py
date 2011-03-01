@@ -46,13 +46,14 @@ class Task(object):
             return 0 + self.replica_offset
     
     def request(self):
+        headers = {"User-Agent": "miyamoto/0.1", "X-Task-Id": self.id}
         if self.method == 'POST':
-            return urllib2.Request(self.url, urllib.urlencode(self.params))
+            return urllib2.Request(self.url, urllib.urlencode(self.params), headers)
         elif task.method == 'GET':
             if self.params:
-                return urllib2.Request('?'.join([self.url, urllib.urlencode(self.params)]))
+                return urllib2.Request('?'.join([self.url, urllib.urlencode(self.params)]), headers=headers)
             else:
-                return urllib2.Request(self.url)
+                return urllib2.Request(self.url, headers=headers)
         else:
             return None
     
