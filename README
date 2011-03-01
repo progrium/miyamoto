@@ -63,4 +63,20 @@ And in 5 seconds, you should see on your listening netcat:
 You can also add tasks as JSON objects. Here's one without a delay:
 
     curl -H "Content-Type: applicatoin/json" -d "{\"url\": \"http://localhost:9099/worker\", \"params\": {\"foo\": \"bar\"}}" http://localhost:8088/queue
-    
+   
+
+WHAT'S GOING ON?
+
+In theory, you'd run a cluster of Miyamoto nodes. Each one is exactly the same, 
+except that one will be the leader. You seed the leader with the first node, but
+otherwise, leaders are elected if, say, the leader dies. Internally there is a list
+of hosts in the cluster that form a ring. Whenever you add tasks to any node, it 
+will send the task round robin to another node in the cluster for basic load 
+balancing. But it will do this R times where R is a replication factor. Each replicant
+has an added delay to execution. If any of them run, the others are canceled.
+In this way you can schedule tasks and not worry that hosts might go down, achieving
+HA of service and data. 
+ 
+LICENSE
+
+MIT
