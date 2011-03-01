@@ -1,0 +1,5 @@
+-delay on dispatch
+-tests
+-performance tests
+-rate limiting
+-idempotency
