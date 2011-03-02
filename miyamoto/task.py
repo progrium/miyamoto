@@ -29,7 +29,7 @@ class Task(object):
             raise NotImplementedError("content type not supported")
         if self.countdown and not self.eta:
             self.eta = int(time.time()+self.countdown)
-        self.id = str(uuid.uuid4())
+        self.id = str(uuid.uuid4()) # vs time.time() is about 100 req/sec slower
         self.replica_hosts = []
         self.replica_offset = 0
     
@@ -58,7 +58,7 @@ class Task(object):
             return None
     
     def serialize(self):
-        return base64.b64encode(cPickle.dumps(self))
+        return base64.b64encode(cPickle.dumps(self, cPickle.HIGHEST_PROTOCOL))
     
     @classmethod
     def unserialize(cls, data):

@@ -37,6 +37,7 @@ class DistributedScheduler(object):
         self.replica_offset = replica_offset
         
     def start(self):
+        self.dispatcher = gevent.socket.create_connection(('127.0.0.1', 6002), source_address=(self.interface, 0))
         self.backend.start()
         self.cluster.start()
     
@@ -102,7 +103,7 @@ class DistributedScheduler(object):
             del self.connections[host]
     
     def _enqueue(self, task):
-        self.queue.put(task)
+        self.dispatcher.send('%s\n' % task.url)
         del self.scheduled[task.id]
     
     def _connection_handler(self, socket, address):
@@ -116,7 +117,7 @@ class DistributedScheduler(object):
                 action, payload = line.split(':', 1)
                 if action == 'schedule':
                     task = Task.unserialize(payload)
-                    print "scheduled: %s" % task.id
+                    #print "scheduled: %s" % task.id
                     self.scheduled[task.id] = gevent.spawn_later(task.time_until(), self._enqueue, task)
                     socket.send('%s\n' % task.id)
                 elif action == 'cancel':

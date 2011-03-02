@@ -6,11 +6,11 @@ import gevent.monkey
 import gevent.wsgi
 import gevent.queue
 
+gevent.monkey.patch_all(thread=True)
+
 from cluster import ClusterManager
 from scheduler import DistributedScheduler
 from task import Task
-
-gevent.monkey.patch_socket()
 
 
 class QueueServer(object):
@@ -27,21 +27,9 @@ class QueueServer(object):
     def run(self, block=True):
         self.scheduler.start()
         self.frontend.start()
-        for x in range(2):
-            gevent.spawn(self._dispatcher)
         
         while block:
-            gevent.sleep()
-        
-    def _dispatcher(self):
-        while True:
-            task = self.queue.get()
-            req = task.request()
-            if req:
-                resp = urllib2.urlopen(req)
-                if resp.code == 200:
-                    self.scheduler.cancel(task)
-                print "dispatched: %s (%s)" % (task.id, resp.code)
+            gevent.sleep(1)
     
     def _frontend_handler(self, env, start_response):
         try:
@@ -66,8 +54,8 @@ if __name__ == '__main__':
     interface = sys.argv[2] if len(sys.argv) == 3 else None
     
     print "%s: Using leader %s..." % (interface, leader)
-    
+
     print "Starting queue server..."
-    server = QueueServer(leader, replica_factor=2, interface=interface)
+    server = QueueServer(leader, replica_factor=1, interface=interface)
     server.run()
     
