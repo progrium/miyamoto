@@ -1,4 +1,5 @@
 import socket
+import urllib2
 try:
     import json
 except ImportError:
@@ -8,14 +9,26 @@ import gevent
 import gevent.monkey
 import gevent.server
 import gevent.socket
+import gevent.queue
 
 gevent.monkey.patch_socket()
 
-from restkit.manager.mgevent import GeventManager
-from restkit.globals import set_manager
-set_manager(GeventManager())
-from restkit import request
+from miyamoto import Task
 
+queue = gevent.queue.Queue()
+
+
+def _dispatch(serialized_task):
+    task = Task.unserialize(unserialized_task)
+    req = task.request()
+    if req:
+        print task.url
+        urllib2.urlopen(req)
+
+def dispatcher():
+    while True:
+        _dispatch(queue.get())
+    
 
 def handler(socket, address):
     print "new connection"
@@ -26,10 +39,13 @@ def handler(socket, address):
         except IOError:
             line = None
         if line:
-            gevent.spawn(request, line, method="POST")
+            queue.put(line)
         else:
             break
     print "conn drop"
+
+for n in range(10):
+    gevent.spawn(dispatcher)
 
 server = gevent.server.StreamServer(('127.0.0.1', 6002), handler)
 server.start()
