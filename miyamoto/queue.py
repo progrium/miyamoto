@@ -56,6 +56,6 @@ if __name__ == '__main__':
     print "%s: Using leader %s..." % (interface, leader)
 
     print "Starting queue server..."
-    server = QueueServer(leader, replica_factor=1, interface=interface)
+    server = QueueServer(leader, replica_factor=2, interface=interface)
     server.run()
     

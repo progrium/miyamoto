@@ -102,8 +102,8 @@ class DistributedScheduler(object):
             self.connections[host].shutdown(0)
             del self.connections[host]
     
-    def _enqueue(self, task):
-        self.dispatcher.send('%s\n' % task.url)
+    def _enqueue(self, task, serialized):
+        self.dispatcher.send('%s\n' % serialized)
         del self.scheduled[task.id]
     
     def _connection_handler(self, socket, address):
@@ -118,7 +118,7 @@ class DistributedScheduler(object):
                 if action == 'schedule':
                     task = Task.unserialize(payload)
                     #print "scheduled: %s" % task.id
-                    self.scheduled[task.id] = gevent.spawn_later(task.time_until(), self._enqueue, task)
+                    self.scheduled[task.id] = gevent.spawn_later(task.time_until(), self._enqueue, task, payload)
                     socket.send('%s\n' % task.id)
                 elif action == 'cancel':
                     task_id = payload
