@@ -22,7 +22,6 @@ def _dispatch(serialized_task):
     task = Task.unserialize(serialized_task)
     req = task.request()
     if req:
-        print task.url
         urllib2.urlopen(req)
 
 def dispatcher():
@@ -44,7 +43,7 @@ def handler(socket, address):
             break
     print "conn drop"
 
-for n in range(10):
+for n in range(5):
     gevent.spawn(dispatcher)
 
 server = gevent.server.StreamServer(('127.0.0.1', 6002), handler)
