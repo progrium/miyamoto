@@ -3,7 +3,7 @@ import operator
 import time
 import os
 
-import gevent.wsgi
+import gevent.pywsgi
 
 class RateSampler(object):
     """Tool for pushing rate over time data"""
@@ -68,7 +68,7 @@ def redraw(v, t):
     os.system("clear")
     print "Last sample: %s tasks/sec" % v
 
-rate = RateSampler(0.5, 3, callback=redraw, name='tasks')
+rate = RateSampler(1, 5, callback=redraw, name='tasks')
 
 
 def sampler(env, start_response):
@@ -76,5 +76,5 @@ def sampler(env, start_response):
     start_response('200 OK', [])
     return ['ok']
 
-server = gevent.wsgi.WSGIServer(('', int(os.environ.get('PORT', 9099))), sampler, log=None)
+server = gevent.pywsgi.WSGIServer(('', int(os.environ.get('PORT', 9099))), sampler, log=None)
 server.serve_forever()

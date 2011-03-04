@@ -46,7 +46,8 @@ class DistributedScheduler(object):
         # This implements the round-robin N replication method for picking
         # which hosts to send the task. In short, every schedule moves along the
         # cluster ring by one, then picks N hosts, where N is level of replication
-        host_ids = [(self.schedules + n) % len(host_list) for n in range(self.replica_factor)]
+        replication_factor = self.replica_factor if self.replica_factor < len(host_list) else len(host_list)
+        host_ids = [(self.schedules + n) % len(host_list) for n in range(replication_factor)]
         hosts = [host_list[id] for id in host_ids]
         task.replica_hosts = hosts
         self.scheduled_acks[task.id] = gevent.queue.Queue()

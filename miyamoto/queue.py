@@ -3,7 +3,7 @@ import urllib2
 
 import gevent
 import gevent.monkey
-import gevent.wsgi
+import gevent.pywsgi
 import gevent.queue
 
 gevent.monkey.patch_all(thread=True)
@@ -19,7 +19,7 @@ class QueueServer(object):
         if interface is None:
             interface = socket.gethostbyname(socket.gethostname())
         self.queue = gevent.queue.Queue()
-        self.frontend = gevent.wsgi.WSGIServer((interface, frontend_port), self._frontend_handler, log=None)
+        self.frontend = gevent.pywsgi.WSGIServer((interface, frontend_port), self._frontend_handler, log=None)
         self.scheduler = DistributedScheduler(self.queue, leader, replica_factor=replica_factor, 
             replica_offset=replica_offset, interface=interface, port=backend_port, cluster_port=cluster_port)
         
