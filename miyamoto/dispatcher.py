@@ -19,7 +19,7 @@ queue = gevent.queue.Queue()
 
 
 def _dispatch(serialized_task):
-    task = Task.unserialize(unserialized_task)
+    task = Task.unserialize(serialized_task)
     req = task.request()
     if req:
         print task.url
