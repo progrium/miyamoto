@@ -13,7 +13,7 @@ import gevent.queue
 
 gevent.monkey.patch_socket()
 
-from miyamoto import Task
+from task import Task
 
 queue = gevent.queue.Queue()
 
