@@ -37,13 +37,13 @@ class Task(object):
         if self.countdown:
             return int(self.countdown) + self.replica_offset
         elif self.eta:
-            countdown = int(int(self.eta)-time.time())
+            countdown = int(int(self.eta) - time.time())
             if countdown < 0:
-                return 0 + self.replica_offset
+                return self.replica_offset
             else:
                 return countdown + self.replica_offset
         else:
-            return 0 + self.replica_offset
+            return self.replica_offset
     
     def request(self):
         headers = {"User-Agent": "Miyamoto/0.1", "X-Task": self.id, "X-Queue": self.queue_name}

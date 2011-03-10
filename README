@@ -82,7 +82,11 @@ ADVERTISED FEATURES NOT YET DONE
 - rate limiting
 - idempotency
 - error handling
- 
+
+CONTRIBUTORS
+
+JJ Behrens
+
 LICENSE
 
 MIT

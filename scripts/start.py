@@ -17,5 +17,5 @@ if os.fork():
     server = QueueServer(leader, replica_factor=2, interface=interface)
     server.run()
 else:
-    dispatcher = Dispatcher()
+    dispatcher = Dispatcher(interface)
     dispatcher.start()

@@ -1,16 +1,15 @@
+import gevent.monkey; gevent.monkey.patch_all()
+
 import socket
 
 import gevent
-import gevent.monkey
 import gevent.server
 import gevent.socket
 import gevent.queue
 
 from cluster import ClusterManager
 from task import Task
-
-gevent.monkey.patch_socket()
-
+import util
 
 class ScheduleError(Exception): pass
 
@@ -37,7 +36,7 @@ class DistributedScheduler(object):
         self.replica_offset = replica_offset
         
     def start(self):
-        self.dispatcher = gevent.socket.create_connection(('127.0.0.1', 6002), source_address=(self.interface, 0))
+        self.dispatcher = gevent.socket.create_connection((self.interface, 6002), source_address=(self.interface, 0))
         self.backend.start()
         self.cluster.start()
     
@@ -46,8 +45,8 @@ class DistributedScheduler(object):
         # This implements the round-robin N replication method for picking
         # which hosts to send the task. In short, every schedule moves along the
         # cluster ring by one, then picks N hosts, where N is level of replication
-        replication_factor = self.replica_factor if self.replica_factor < len(host_list) else len(host_list)
-        host_ids = [(self.schedules + n) % len(host_list) for n in range(replication_factor)]
+        replication_factor = min(self.replica_factor, len(host_list))
+        host_ids = [(self.schedules + n) % len(host_list) for n in xrange(replication_factor)]
         hosts = [host_list[id] for id in host_ids]
         task.replica_hosts = hosts
         self.scheduled_acks[task.id] = gevent.queue.Queue()
@@ -55,6 +54,7 @@ class DistributedScheduler(object):
             self.connections[host].send('schedule:%s\n' % task.serialize())
             task.replica_offset += self.replica_offset
         try:
+            # TODO: document, wrap this whole operation in timeout
             return all([self.scheduled_acks[task.id].get(timeout=2) for h in hosts])
         except gevent.queue.Empty:
             raise ScheduleError("not all hosts acked")
@@ -81,21 +81,15 @@ class DistributedScheduler(object):
         print "connecting to %s:%s" % (host, self.port)
         client = gevent.socket.create_connection((host, self.port), source_address=(self.interface, 0))
         self.connections[host] = client
-        fileobj = client.makefile()
-        while True:
+        for line in util.line_protocol(client):
+            ack, task_id = line.split(':', 1)
             try:
-                line = fileobj.readline().strip()
-            except IOError:
-                line = None
-            if line:
-                try:
-                    self.scheduled_acks[line].put(True)
-                except KeyError:
-                    pass
-            else:
-                break
-        print "disconnected from %s" % host
-        del self.connections[host]
+                self.scheduled_acks[line].put(True)
+            except KeyError:
+                pass
+        if host in self.connections:
+            print "disconnected from %s" % host
+            del self.connections[host]
     
     def disconnect(self, host):
         if host in self.connections:
@@ -108,29 +102,20 @@ class DistributedScheduler(object):
         del self.scheduled[task.id]
     
     def _connection_handler(self, socket, address):
-        fileobj = socket.makefile()
-        while True:
-            try:
-                line = fileobj.readline().strip()
-            except IOError:
-                line = None
-            if line:
-                action, payload = line.split(':', 1)
-                if action == 'schedule':
-                    task = Task.unserialize(payload)
-                    #print "scheduled: %s" % task.id
-                    self.scheduled[task.id] = gevent.spawn_later(task.time_until(), self._enqueue, task, payload)
-                    socket.send('%s\n' % task.id)
-                elif action == 'cancel':
-                    task_id = payload
-                    print "canceled: %s" % task_id
-                    self.scheduled[task_id].kill()
-                    del self.scheduled[task_id]
-                    #socket.send('%s\n' % task_id)
-                elif action == 'delay':
-                    print "internal delay"
-                    task_id = payload
-                    self.scheduled[task_id].start_later() # ummm
-                    #socket.send('%s\n' % task_id)   
-            else:
-                break
+        for line in util.line_protocol(socket):
+            action, payload = line.split(':', 1)
+            if action == 'schedule':
+                task = Task.unserialize(payload)
+                #print "scheduled: %s" % task.id
+                self.scheduled[task.id] = gevent.spawn_later(task.time_until(), self._enqueue, task, payload)
+                socket.send('scheduled:%s\n' % task.id)
+            elif action == 'cancel':
+                task_id = payload
+                print "canceled: %s" % task_id
+                self.scheduled[task_id].pop().kill()
+                #socket.send('%s\n' % task_id)
+            elif action == 'delay':
+                print "internal delay"
+                task_id = payload
+                self.scheduled[task_id].start_later() # ummm
+                #socket.send('%s\n' % task_id)   

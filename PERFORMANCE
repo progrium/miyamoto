@@ -1,0 +1,4 @@
+10000 requests, 30 concurrent, keepalives
+
+Jeff's MacBook, one node:
+    ~550 req/sec in, ~200 req/sec out

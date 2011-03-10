@@ -1,21 +1,28 @@
+import gevent.monkey; gevent.monkey.patch_all()
+
 import socket
 import urllib2
+try:
+    import json
+except ImportError:
+    import simplejson as json
 
 import gevent
-import gevent.monkey
 import gevent.pywsgi
 import gevent.queue
-
-gevent.monkey.patch_all(thread=True)
 
 from cluster import ClusterManager
 from scheduler import DistributedScheduler
 from task import Task
-
+import constants
 
 class QueueServer(object):
-    def __init__(self, leader, replica_factor=2, replica_offset=5, interface=None, 
-        frontend_port=8088, backend_port=6001, cluster_port=6000):
+    # TODO: make args list
+    def __init__(self, leader, replica_factor=constants.DEFAULT_REPLICA_FACTOR, 
+        replica_offset=constants.DEFAULT_REPLICA_SECS_OFFSET, interface=None, 
+        frontend_port=constants.DEFAULT_FRONTEND_PORT, 
+        backend_port=constants.DEFAULT_BACKEND_PORT, 
+        cluster_port=constants.DEFAULT_CLUSTER_PORT):
         if interface is None:
             interface = socket.gethostbyname(socket.gethostname())
         self.queue = gevent.queue.Queue()
@@ -44,18 +51,4 @@ class QueueServer(object):
             return ['{"status": "scheduled", "id": "%s"}\n' % task.id]
         except Exception, e:
             start_response('500 Error', [('Content-Type', 'application/json')])
-            return ['{"status": "error", "details": "%s"}\n' % repr(e)]
-        
-
-if __name__ == '__main__':
-    import sys
-    
-    leader = sys.argv[1]
-    interface = sys.argv[2] if len(sys.argv) == 3 else None
-    
-    print "%s: Using leader %s..." % (interface, leader)
-
-    print "Starting queue server..."
-    server = QueueServer(leader, replica_factor=2, interface=interface)
-    server.run()
-    
+            return [json.dumps({"status": "error", "details": repr(e)})]
