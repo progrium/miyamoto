@@ -18,20 +18,21 @@ Miyamoto is designed for:
 Miyamoto is bad if you want:
  - Slow disk persistence (but we may add it)
  - Traditional task polling
- - AMQP, JMS, or other interfaces
+ - Smart clients
+ - AMQP, JMS, STOMP or other interfaces*
 
 Not out of the box, but you can still achieve:
  - Synchronous tasks
  - Return values / result storage
  - Workers behind firewall/NAT
  
+* = Excluding ZeroMQ, which is used internally, so there are optional ZMQ interfaces
+ 
 GETTING STARTED
 
-Make sure you have Python 2.6+ installed with gevent.
+Make sure you have Python 2.6+ installed with gevent. Run on port 8088 with:
 
-    python miyamoto/queue.py 127.0.0.1 127.0.0.1
-
-For now, read the code to see what that means. Some better hints in miyamoto/cluster.py
+    INTERFACE=127.0.0.1 python scripts/start.py
 
 USAGE
 
@@ -62,7 +63,7 @@ And in 5 seconds, you should see on your listening netcat:
 
 You can also add tasks as JSON objects. Here's one without a delay:
 
-    curl -H "Content-Type: applicatoin/json" -d "{\"url\": \"http://localhost:9099/worker\", \"params\": {\"foo\": \"bar\"}}" http://localhost:8088/queue
+    curl -H "Content-Type: applicatoin/json" -d '{"url": "http://localhost:9099/worker", "params": {"foo": "bar"}}' http://localhost:8088/queue
    
 
 WHAT'S GOING ON?
