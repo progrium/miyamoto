@@ -24,7 +24,8 @@ Miyamoto is bad if you want:
 Not out of the box, but you can still achieve:
  - Synchronous tasks
  - Return values / result storage
- - Workers behind firewall/NAT
+ - Workers behind firewall / NAT
+ - Dynamically adding to the worker pool
  
 * = Excluding ZeroMQ, which is used internally, so there are optional ZMQ interfaces
  
@@ -86,6 +87,7 @@ ADVERTISED FEATURES NOT YET DONE
 
 CONTRIBUTORS
 
+Evan Cooke
 JJ Behrens
 
 LICENSE

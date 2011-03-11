@@ -1,4 +1,4 @@
-10000 requests, 30 concurrent, keepalives
+10000 requests, 10 concurrent, keepalives
 
 TCP scheduler:
 Jeff's MacBook (no balancer)

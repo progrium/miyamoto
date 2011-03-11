@@ -1,8 +1,15 @@
--zmq
--tcp keepalives for cluster manager
+high pri:
 -delay on dispatch
--tests
--performance tests
--rate limiting
+-dispatch response, task finishing
 -idempotency
+-functional tests
+-automated cluster performance tests
+ -clusterable enqueuer and dequeuer samplers
+ 
+low pri:
+-precomputed uuid cache/generator
+-tcp keepalives instead of app keepalives for cluster manager
+-zmq enqueue interface
+-normalize to json/dict task structure
+-rate limiting
 -error webhook
