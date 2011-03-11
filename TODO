@@ -8,8 +8,10 @@ high pri:
 -functional tests
 -automated cluster performance tests
  -clusterable enqueuer and dequeuer samplers
+-compare out of box perf to kestrel and celery (rabbitmq)
  
 low pri:
+-start defer library prototype
 -precomputed uuid cache/generator
 -tcp keepalives instead of app keepalives for cluster manager
 -zmq enqueue interface
