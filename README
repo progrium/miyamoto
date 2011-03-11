@@ -41,7 +41,7 @@ Once it's running (currently hardcoded to 8088), set up a pretend web server wit
 
     nc -l 9099
 
-Now let's post a task to it: 
+Now let's post a task to it scheduled to run in 5 seconds: 
 
     curl -d "task.url=http://localhost:9099/worker&task.countdown=5&foo=bar" http://localhost:8088/queue
 
@@ -85,10 +85,20 @@ ADVERTISED FEATURES NOT YET DONE
 - idempotency
 - error handling
 
+INSPIRATION
+
+App Engine - API, features
+Celery - features, anti-features
+Memcache - ideas around consistent hashing
+Membase - replication, clustering
+ZooKeeper - realtime group membership, leader election
+Kestrel - speed, simplicity
+ZeroMQ - oh, the possibilities
+
 CONTRIBUTORS
 
-Evan Cooke
-JJ Behrens
+Evan Cooke - offset replica scheduling idea
+JJ Behrens - code review, feedback
 
 LICENSE
 

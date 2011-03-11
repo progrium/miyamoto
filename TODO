@@ -1,7 +1,10 @@
 high pri:
--delay on dispatch
+-reschedule replicas on dispatch
 -dispatch response, task finishing
 -idempotency
+ -local node enqueue idempotency
+ -internal uniqueness check?
+ -worker fail on duplicate
 -functional tests
 -automated cluster performance tests
  -clusterable enqueuer and dequeuer samplers

@@ -1,9 +1,9 @@
 10000 requests, 10 concurrent, keepalives
 
-TCP scheduler:
+TCP socket-based scheduler:
 Jeff's MacBook (no balancer)
     nodes=1, replication=1:
-        ~600 req/sec http-in, ~250 req/sec http-out, 42%
+        ~600 req/sec http-in, ~250 req/sec http-out, 42% (throughput ratio)
         ~740 req/sec http-in, ~300 req/sec zmq-out, 40%
     nodes=2, replication=1:
         ~550 req/sec http-in, ~220 req/sec http-out, 40%
@@ -11,3 +11,11 @@ Jeff's MacBook (no balancer)
     nodes=2, replication=2:
         ~400 req/sec http-in, ~300 req/sec http-out, 75%
         ~550 req/sec http-in, ~400 req/sec zmq-out, 73%
+
+
+Performance improvement experiments/plans:
+ - Precompute UUIDs when idle
+ - Use multiprocessing to better leverage CPUs
+ - Use ZeroMQ for scheduler transport
+ - Simpler task representation for faster serialization
+ - PyPy?
