@@ -84,7 +84,7 @@ class DistributedScheduler(object):
         for line in util.line_protocol(client):
             ack, task_id = line.split(':', 1)
             try:
-                self.scheduled_acks[line].put(True)
+                self.scheduled_acks[task_id].put(True)
             except KeyError:
                 pass
         if host in self.connections:
@@ -112,7 +112,7 @@ class DistributedScheduler(object):
             elif action == 'cancel':
                 task_id = payload
                 print "canceled: %s" % task_id
-                self.scheduled[task_id].pop().kill()
+                self.scheduled.pop(task_id).kill()
                 #socket.send('%s\n' % task_id)
             elif action == 'delay':
                 print "internal delay"

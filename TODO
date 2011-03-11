@@ -1,4 +1,5 @@
--socket line generator
+-zmq
+-tcp keepalives for cluster manager
 -delay on dispatch
 -tests
 -performance tests

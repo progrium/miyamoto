@@ -1,4 +1,13 @@
 10000 requests, 30 concurrent, keepalives
 
-Jeff's MacBook, one node:
-    ~550 req/sec in, ~200 req/sec out
+TCP scheduler:
+Jeff's MacBook (no balancer)
+    nodes=1, replication=1:
+        ~600 req/sec http-in, ~250 req/sec http-out, 42%
+        ~740 req/sec http-in, ~300 req/sec zmq-out, 40%
+    nodes=2, replication=1:
+        ~550 req/sec http-in, ~220 req/sec http-out, 40%
+        ~660 req/sec http-in, ~270 req/sec zmq-out, 40%
+    nodes=2, replication=2:
+        ~400 req/sec http-in, ~300 req/sec http-out, 75%
+        ~550 req/sec http-in, ~400 req/sec zmq-out, 73%

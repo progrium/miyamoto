@@ -93,41 +93,41 @@ class ClusterManager(object):
         in the cluster that's not the leader). We also maintain a keepalive. If we
         disconnect, it does a leader elect and reconnects.
         """
-        client = gevent.socket.create_connection((self.leader, self.port), 
-                    source_address=(self.interface, 0))
-        # Use TCP keepalives
-        keepalive = gevent.spawn_later(5, lambda: client.send('\n'))
-        try:
-            for line in util.line_protocol(client, strip=False):
-                if line == '\n':
-                    # Keepalive ack from leader
-                    keepalive.kill()
-                    keepalive = gevent.spawn_later(5, lambda: client.send('\n'))
-                else:
-                    new_cluster = json.loads(line)
-                    if len(new_cluster) == 1:
-                        # Cluster of one means you have the wrong leader
-                        self.leader = new_cluster[0]
-                        print "redirected to %s..." % self.leader
-                        raise NewLeader()
+        while True:
+            client = gevent.socket.create_connection((self.leader, self.port), 
+                        source_address=(self.interface, 0))
+            # Use TCP keepalives
+            keepalive = gevent.spawn_later(5, lambda: client.send('\n'))
+            try:
+                for line in util.line_protocol(client, strip=False):
+                    if line == '\n':
+                        # Keepalive ack from leader
+                        keepalive.kill()
+                        keepalive = gevent.spawn_later(5, lambda: client.send('\n'))
                     else:
-                        self.cluster = set(new_cluster)
-                        if self.callback:
-                            self.callback(self.cluster.copy())
-            self.cluster.remove(self.leader)
-            candidates = list(self.cluster)
-            candidates.sort()
-            self.leader = candidates[0]
-            print "new leader %s..." % self.leader
-            # TODO: if i end up thinking i'm the leader when i'm not
-            # then i will not rejoin the cluster
-            raise NewLeader()
-        except NewLeader:
-            if self.callback:
-                self.callback(self.cluster.copy())
-            if not self.is_leader():
-                gevent.sleep(1) # TODO: back off loop, not a sleep
-                self.connect() # BUG: will cause stack overflow, use loop
+                        new_cluster = json.loads(line)
+                        if len(new_cluster) == 1:
+                            # Cluster of one means you have the wrong leader
+                            self.leader = new_cluster[0]
+                            print "redirected to %s..." % self.leader
+                            raise NewLeader()
+                        else:
+                            self.cluster = set(new_cluster)
+                            if self.callback:
+                                self.callback(self.cluster.copy())
+                self.cluster.remove(self.leader)
+                candidates = list(self.cluster)
+                candidates.sort()
+                self.leader = candidates[0]
+                print "new leader %s..." % self.leader
+                # TODO: if i end up thinking i'm the leader when i'm not
+                # then i will not rejoin the cluster
+                raise NewLeader()
+            except NewLeader:
+                if self.callback:
+                    self.callback(self.cluster.copy())
+                if not self.is_leader():
+                    gevent.sleep(1) # TODO: back off loop, not a sleep
 
     def _connection_handler(self, socket, address):
         """

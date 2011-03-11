@@ -4,6 +4,7 @@ import time
 import os
 
 import gevent.pywsgi
+from gevent_zeromq import zmq
 
 class RateSampler(object):
     """Tool for pushing rate over time data"""
@@ -69,12 +70,21 @@ def redraw(v, t):
     print "Last sample: %s tasks/sec" % v
 
 rate = RateSampler(1, 5, callback=redraw, name='tasks')
+ctx = zmq.Context()
 
-
-def sampler(env, start_response):
+def http_sampler(env, start_response):
     rate.tick()
     start_response('200 OK', [])
     return ['ok']
 
-server = gevent.pywsgi.WSGIServer(('', int(os.environ.get('PORT', 9099))), sampler, log=None)
+def zmq_sampler():
+    socket = ctx.socket(zmq.REP)
+    socket.bind('tcp://127.0.0.1:9999')
+    while True:
+        socket.recv()
+        rate.tick()
+        socket.send("ok")
+
+gevent.spawn(zmq_sampler)
+server = gevent.pywsgi.WSGIServer(('', int(os.environ.get('PORT', 9099))), http_sampler, log=None)
 server.serve_forever()
