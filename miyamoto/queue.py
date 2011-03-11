@@ -26,7 +26,7 @@ class QueueServer(object):
         if interface is None:
             interface = socket.gethostbyname(socket.gethostname())
         self.queue = gevent.queue.Queue()
-        self.frontend = gevent.pywsgi.WSGIServer((interface, frontend_port), self._frontend_handler, log=None)
+        self.frontend = gevent.pywsgi.WSGIServer((interface, frontend_port), self._frontend_app, log=None)
         self.scheduler = DistributedScheduler(self.queue, leader, replica_factor=replica_factor, 
             replica_offset=replica_offset, interface=interface, port=backend_port, cluster_port=cluster_port)
         
@@ -38,7 +38,7 @@ class QueueServer(object):
         while block:
             gevent.sleep(1)
     
-    def _frontend_handler(self, env, start_response):
+    def _frontend_app(self, env, start_response):
         try:
             queue_name = env['PATH_INFO']
             content_type = env['CONTENT_TYPE']
@@ -51,4 +51,4 @@ class QueueServer(object):
             return ['{"status": "scheduled", "id": "%s"}\n' % task.id]
         except Exception, e:
             start_response('500 Error', [('Content-Type', 'application/json')])
-            return [json.dumps({"status": "error", "details": repr(e)})]
+            return [json.dumps({"status": "error", "reason": repr(e)})]
