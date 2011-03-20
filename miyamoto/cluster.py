@@ -57,6 +57,7 @@ import gevent.socket
 import constants
 import util
 
+class ClusterError(Exception): pass
 class NewLeader(Exception): pass
 
 class ClusterManager(object):
@@ -94,8 +95,11 @@ class ClusterManager(object):
         disconnect, it does a leader elect and reconnects.
         """
         while True:
-            client = gevent.socket.create_connection((self.leader, self.port), 
+            try:
+                client = gevent.socket.create_connection((self.leader, self.port), 
                         source_address=(self.interface, 0))
+            except IOError:
+                raise ClusterError("Unable to connect to leader: %s" % self.leader)
             # Use TCP keepalives
             keepalive = gevent.spawn_later(5, lambda: client.send('\n'))
             try:
@@ -128,6 +132,8 @@ class ClusterManager(object):
                     self.callback(self.cluster.copy())
                 if not self.is_leader():
                     gevent.sleep(1) # TODO: back off loop, not a sleep
+                else:
+                    break
 
     def _connection_handler(self, socket, address):
         """
