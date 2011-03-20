@@ -1,8 +1,11 @@
 Miyamoto Task Queue
 
 Miyamoto is a fast, clusterable task queue inspired by Google App Engine's task 
-queue. This means it speaks HTTP with a RESTful API for enqueuing tasks and uses
-webhooks for processing tasks. Worker daemons are simply your web daemons.
+queue. This means it speaks HTTP with a RESTful API for enqueuing tasks and 
+uses HTTP callbacks (webhooks) for processing tasks. Worker daemons can be any 
+web daemon.
+
+End result? Super easy asynchronous processing.
 
 Like the App Engine task queue, Miyamoto features task scheduling and rate 
 limiting. Unlike the App Engine task queue, it provides idempotency semantics
@@ -74,7 +77,7 @@ except that one will be the leader. You seed the leader with the first node, but
 otherwise, leaders are elected if, say, the leader dies. Internally there is a list
 of hosts in the cluster that form a ring. Whenever you add tasks to any node, it 
 will send the task round robin to another node in the cluster for basic load 
-balancing. But it will do this R times where R is a replication factor. Each replicant
+balancing. But it will do this N times where N is a replication factor. Each replicant
 has an added delay to execution. If any of them run, the others are canceled.
 In this way you can schedule tasks and not worry that hosts might go down, achieving
 HA of service and data. 
@@ -82,7 +85,7 @@ HA of service and data.
 ADVERTISED FEATURES NOT YET DONE
 
 - rate limiting
-- idempotency
+- idempotency safeguards
 - error handling
 
 INSPIRATION
