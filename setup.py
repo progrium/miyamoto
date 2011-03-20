@@ -10,7 +10,7 @@ setup(
     description='task queue',
     packages=['miyamoto'],
     scripts=[],
-    install_requires=['gevent', 'urllib3'],
+    install_requires=['gevent', 'httplib2'],
     data_files=[
         #('/etc/init.d', ['init.d/realtime']),
     ]
