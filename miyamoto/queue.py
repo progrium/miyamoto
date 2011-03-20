@@ -29,11 +29,10 @@ class QueueServer(object):
         self.frontend = gevent.pywsgi.WSGIServer((interface, frontend_port), self._frontend_app, log=None)
         self.scheduler = DistributedScheduler(self.queue, leader, replica_factor=replica_factor, 
             replica_offset=replica_offset, interface=interface, port=backend_port, cluster_port=cluster_port)
-        
     
-    def run(self, block=True):
-        self.scheduler.start()
+    def start(self, block=True):
         self.frontend.start()
+        self.scheduler.start()
         
         while block:
             gevent.sleep(1)
@@ -45,7 +44,7 @@ class QueueServer(object):
             body = env['wsgi.input'].read()
             task = Task(queue_name, content_type, body)
             
-            self.scheduler.schedule(task)
+            self.scheduler.schedule(task) # TODO: needs queue on the other end
             
             start_response('200 OK', [('Content-Type', 'application/json')])
             return ['{"status": "scheduled", "id": "%s"}\n' % task.id]

@@ -8,7 +8,7 @@ def line_protocol(socket, strip=True):
                 line = line.strip()
         except IOError:
             line = None
-        if line is not None:
+        if line:
             yield line
         else:
             break

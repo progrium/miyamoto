@@ -7,6 +7,7 @@ import urllib2
 import urlparse
 import uuid
 
+import gevent
 
 class Task(object):
     def __init__(self, queue_name, content_type, body):
@@ -15,28 +16,28 @@ class Task(object):
             data = json.loads(body)
             self.url = data['url']
             self.method = data.get('method', 'POST')
-            self.countdown = data.get('countdown')
+            countdown = data.get('countdown')
             self.eta = data.get('eta')
             self.params = data.get('params', {})
         elif content_type == 'application/x-www-form-urlencoded':
             data = urlparse.parse_qs(body)
             self.url = data['task.url'][0]
             self.method = data.get('task.method', ['POST'])[0]
-            self.countdown = data.get('task.countdown', [None])[0]
+            countdown = data.get('task.countdown', [None])[0]
             self.eta = data.get('task.eta', [None])[0]
             self.params = dict([(k,v[0]) for k,v in data.items() if not k.startswith('task.')])
         else:
             raise NotImplementedError("content type not supported")
-        if self.countdown and not self.eta:
-            self.eta = int(time.time()+self.countdown)
+        if countdown and not self.eta:
+            self.eta = int(time.time()+int(countdown))
         self.id = str(uuid.uuid4()) # vs time.time() is about 100 req/sec slower
         self.replica_hosts = []
         self.replica_offset = 0
+        self._greenlet = None
+        self._serialize_cache = None
     
     def time_until(self):
-        if self.countdown:
-            return int(self.countdown) + self.replica_offset
-        elif self.eta:
+        if self.eta:
             countdown = int(int(self.eta) - time.time())
             if countdown < 0:
                 return self.replica_offset
@@ -45,21 +46,25 @@ class Task(object):
         else:
             return self.replica_offset
     
-    def request(self):
-        headers = {"User-Agent": "Miyamoto/0.1", "X-Task": self.id, "X-Queue": self.queue_name}
-        if self.method == 'POST':
-            return urllib2.Request(self.url, urllib.urlencode(self.params), headers)
-        elif task.method == 'GET':
-            if self.params:
-                return urllib2.Request('?'.join([self.url, urllib.urlencode(self.params)]), headers=headers)
-            else:
-                return urllib2.Request(self.url, headers=headers)
-        else:
-            return None
+    def schedule(self, dispatcher):
+        self._greenlet = gevent.spawn_later(self.time_until(), dispatcher.dispatch, self)
+    
+    def reschedule(self, dispatcher, eta):
+        self.cancel()
+        self.eta = eta
+        self.schedule(dispatcher)
+    
+    def cancel(self):
+        self._greenlet.kill()
     
     def serialize(self):
-        return base64.b64encode(cPickle.dumps(self, cPickle.HIGHEST_PROTOCOL))
+        if self._serialize_cache:
+            return self._serialize_cache
+        else:
+            return base64.b64encode(cPickle.dumps(self, cPickle.HIGHEST_PROTOCOL))
     
     @classmethod
     def unserialize(cls, data):
-        return cPickle.loads(base64.b64decode(data))
+        task = cPickle.loads(base64.b64decode(data))
+        task._serialize_cache = data
+        return task

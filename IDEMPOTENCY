@@ -1,0 +1,13 @@
+(Planned) Idempotency safeguards:
+ - Optional task.last_id param on enqueue.
+    This will prevent the same request accidentally made several times from enqueuing more than 1 task.
+    First pass, it will only work when requesting to the same host (no shared last_id list)
+    Second pass, it will work on any host, but after a delay. 
+        Mostly helps against accidental infinite loops. There will still be some dupes created
+ - Unique task id sent to worker
+    Means multiple workers will need shared state (memcache?) for ids
+
+
+Known situations worker will receive task twice:
+ - Miyamoto node that is waiting on worker dies
+ - Client adds task with same last_id across multiple Miyamoto hosts

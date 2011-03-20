@@ -1,7 +1,9 @@
 from gevent import wsgi
+import gevent
 
 def outputter(env, start):
     print env
+    gevent.sleep(4)
     start('200 OK', {})
     return ["ok"]
 
