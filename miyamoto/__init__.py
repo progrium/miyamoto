@@ -1,6 +1,9 @@
 import os
+import logging
 import multiprocessing
+import threading
 import json
+import sys
 
 from gevent_zeromq import zmq
 import gevent
@@ -10,8 +13,11 @@ from miyamoto.queue import QueueServer
 from miyamoto.dispatcher import Dispatcher
 from miyamoto import constants
 
+logger = logging.getLogger()
+logger.addHandler(logging.StreamHandler(sys.stdout))
+
 class _MiyamotoNode(object):
-    def __init__(self, leader, replicas, interface):
+    def __init__(self, leader, replicas, interface, mode=multiprocessing):
         self.leader = leader
         self.replicas = replicas
         self.interface = interface
@@ -40,7 +46,8 @@ class _MiyamotoNode(object):
         headers = {'Content-Type': 'application/json'}
         http = httplib2.Http()
         resp, content = http.request(url, method='POST', headers=headers, body=json.dumps(task))
-        if resp['status'] == 200:
+        print ">", resp, content
+        if resp['status'] == '200':
             return True
         else:
             return False
@@ -50,7 +57,7 @@ class _MiyamotoNode(object):
             gevent.sleep(1)
             server = QueueServer(self.leader, replica_factor=self.replicas, interface=self.interface)
             if self.ready:
-                server.scheduler._ready_event = self.ready
+                server._ready_event = self.ready
             server.start()
         process = multiprocessing.Process(target=enqueuer, name='enqueuer')
         process.start()
@@ -66,7 +73,7 @@ class _MiyamotoNode(object):
         self.pool.append(process)
 
 def start(leader, replicas, interface=None):
-    print "Starting Miyamoto..."
+    logger.info("Starting Miyamoto...")
     m = _MiyamotoNode(leader, replicas, interface)
     m.start()
     return m

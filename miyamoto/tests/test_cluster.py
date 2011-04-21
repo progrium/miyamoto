@@ -28,7 +28,7 @@ def test_cluster_starts_and_all_nodes_work():
 def test_replication_by_killing_node_after_schedule():
     countdown = TaskCountdown(1)
     url = countdown.start()
-    _cluster.nodes[0].enqueue('test', {'url': url, 'countdown': 1})
+    assert _cluster.nodes[0].enqueue('test', {'url': url, 'countdown': 1})
     assert not countdown.finished()
     _cluster.nodes[0].terminate()
     countdown.wait(1)
@@ -38,12 +38,14 @@ def test_replication_by_killing_node_after_schedule():
 def test_add_node_and_that_it_replicates_into_cluster():
     countdown = TaskCountdown(2)
     url = countdown.start()
-    #node = _cluster.add()
-    assert _cluster.nodes[-1].enqueue('test', {'url': url})
-    assert _cluster.nodes[-1].enqueue('test', {'url': url})
+    node = _cluster.add()
+    gevent.sleep(2)
+    print url
+    assert node.enqueue('test', {'url': url})
+    assert node.enqueue('test', {'url': url})
     #node.enqueue('test', {'url': url, 'countdown': 2})
     #node.terminate()
-    countdown.wait()
+    countdown.wait(2)
     print countdown.count
     assert countdown.finished()
 

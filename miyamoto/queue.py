@@ -29,10 +29,16 @@ class QueueServer(object):
         self.frontend = gevent.pywsgi.WSGIServer((interface, frontend_port), self._frontend_app, log=None)
         self.scheduler = DistributedScheduler(self.queue, leader, replica_factor=replica_factor, 
             replica_offset=replica_offset, interface=interface, port=backend_port, cluster_port=cluster_port)
+        self._ready_event = None
     
     def start(self, block=True):
         self.frontend.start()
         self.scheduler.start()
+        
+        while not self.frontend.started:
+            gevent.sleep(1)
+        
+        self._ready_event.set()
         
         while block:
             gevent.sleep(1)
@@ -48,6 +54,6 @@ class QueueServer(object):
             
             start_response('200 OK', [('Content-Type', 'application/json')])
             return ['{"status": "scheduled", "id": "%s"}\n' % task.id]
-        except Exception, e:
+        except NotImplemented, e:
             start_response('500 Error', [('Content-Type', 'application/json')])
             return [json.dumps({"status": "error", "reason": repr(e)})]

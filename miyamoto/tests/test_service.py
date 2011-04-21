@@ -60,4 +60,23 @@ def test_child_service():
     s.stop()
     assert s.child.started == False, "Child service is still started"
     assert s.child.ready == False, "Child service is still ready"
-            
+
+def test_service_greenlets():
+    class GreenletService(BasicService):
+        def _start(self):
+            for n in xrange(3):
+                self.spawn(self._run, n)
+            return service.READY
+
+        def _run(self, index):
+            while True:
+                gevent.sleep(0.1)
+    
+    s = GreenletService('greenlets')
+    s.start()
+    for greenlet in s._greenlets:
+        assert not greenlet.ready(), "Greenlet is ready when it shouldn't be"
+    s.stop()
+    for greenlet in s._greenlets:
+        assert greenlet.ready(), "Greenlet isn't ready after stop"
+                

@@ -47,6 +47,7 @@ pointing to any other node, and they all get updated immediately.
 """
 import gevent.monkey; gevent.monkey.patch_all()
 
+import logging
 import socket
 import json
 
@@ -56,6 +57,8 @@ import gevent.socket
 
 import constants
 import util
+
+logger = logging.getLogger('cluster')
 
 class ClusterError(Exception): pass
 class NewLeader(Exception): pass
@@ -70,14 +73,15 @@ class ClusterManager(object):
         self.callback = callback
         self.port = port
         self.cluster = set()
-        self.server = None
+        self.pool = []
+        self.server = gevent.server.StreamServer((self.interface, self.port), self._connection_handler)
         self.connections = {}
     
     def is_leader(self):
         return self.interface == self.leader
     
     def start(self):
-        self.server = gevent.server.StreamServer((self.interface, self.port), self._connection_handler)
+        logger.info("Cluster manager starting for %s on port %s" % (self.interface, self.port))
         self.server.start()
         if self.is_leader():
             self.cluster.add(self.interface)
@@ -95,11 +99,13 @@ class ClusterManager(object):
         disconnect, it does a leader elect and reconnects.
         """
         while True:
+            logger.info("Connecting to leader %s on port %s" % (self.leader, self.port))
             try:
-                client = gevent.socket.create_connection((self.leader, self.port), 
-                        source_address=(self.interface, 0))
+                client = util.connect_and_retry((self.leader, self.port), 
+                        source_address=(self.interface, 0), max_retries=5)
             except IOError:
                 raise ClusterError("Unable to connect to leader: %s" % self.leader)
+            logger.info("Connected to leader")
             # Use TCP keepalives
             keepalive = gevent.spawn_later(5, lambda: client.send('\n'))
             try:
@@ -113,7 +119,7 @@ class ClusterManager(object):
                         if len(new_cluster) == 1:
                             # Cluster of one means you have the wrong leader
                             self.leader = new_cluster[0]
-                            print "redirected to %s..." % self.leader
+                            logger.info("Redirected to %s..." % self.leader)
                             raise NewLeader()
                         else:
                             self.cluster = set(new_cluster)
@@ -123,7 +129,7 @@ class ClusterManager(object):
                 candidates = list(self.cluster)
                 candidates.sort()
                 self.leader = candidates[0]
-                print "new leader %s..." % self.leader
+                logger.info("New leader %s..." % self.leader)
                 # TODO: if i end up thinking i'm the leader when i'm not
                 # then i will not rejoin the cluster
                 raise NewLeader()
@@ -165,7 +171,7 @@ class ClusterManager(object):
             pass
     
     def _update(self, add=None, remove=None):
-        """ Used by leader to manager and broadcast roster """
+        """ Used by leader to manage and broadcast roster """
         if add is not None:
             self.cluster.add(add['host'])
             self.connections[add['host']] = add['socket']

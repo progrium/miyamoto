@@ -38,17 +38,12 @@ class DistributedScheduler(object):
         
         self.replica_factor = replica_factor
         self.replica_offset = replica_offset
-        
-        # Set this semaphore slot to be signaled when a certain num of peers are connected
-        self._ready_event = None
+
         
     def start(self):
         self.dispatcher.start()
         self.backend.start()
         self.cluster.start()
-        
-        if self.cluster.is_leader() and self._ready_event:
-            self._ready_event.set()
     
     def schedule(self, task):
         host_list = list(self.peers)
@@ -87,8 +82,6 @@ class DistributedScheduler(object):
     def _add_peer(self, host):
         client = gevent.socket.create_connection((host, self.port), source_address=(self.interface, 0))
         self.connections[host] = client
-        if host == self.cluster.leader and self._ready_event:
-            self._ready_event.set()
         for line in util.line_protocol(client):
             ack, task_id = line.split(':', 1)
             if ack == 'scheduled' and task_id in self.scheduled_acks:

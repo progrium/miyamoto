@@ -3,7 +3,7 @@ import gevent
 
 def outputter(env, start):
     print env
-    gevent.sleep(4)
+    #gevent.sleep(4)
     start('200 OK', {})
     return ["ok"]
 
